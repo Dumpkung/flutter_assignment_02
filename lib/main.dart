@@ -158,7 +158,7 @@ class _TodoListScreenPage extends State<Todostate> {
 
       //delete item
       //Use//
-    _datamanage.deleteDone();
+    _datamanage.deleteTodo();
           setState(() {
             _completeItems =List();
           });
