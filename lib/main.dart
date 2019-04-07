@@ -21,14 +21,20 @@ class HexColor extends Color {
 //RunApp
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
-  @override
+    @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Todo Flutter',
-      theme: new ThemeData(
+      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
         primarySwatch: Colors.grey,
       ),
-      home: Todostate(title: 'Todo List'),
+      // home: MyHomePage(),
+      initialRoute: "/",
+      routes: {
+        "/": (context) => Todostate(),
+        "/add": (context) => AddItempage(),
+      },
     );
   }
 }
@@ -44,13 +50,15 @@ class Todostate extends StatefulWidget {
 }
 
 class _TodoListScreenPage extends State<Todostate> {
-  List<TodoManager> _unCompleteItems = List();
-  List<TodoManager> _completeItems = List();
-  DataAccess _datamanage;
+  List<TodoManage> _unCompleteItems = List();
+  List<TodoManage> _completeItems = List();
+  TodoProvider _datamanage;
   int counttodo = 0, countcomplete = 0;
+  bool havecount = false, havedelete = false, haveupdate = false, state = false;
+  int count = 0;
 
   _TodoListScreenPage() {
-    _datamanage = DataAccess();
+    _datamanage =  new TodoProvider();;
   }
 
 
@@ -59,61 +67,140 @@ class _TodoListScreenPage extends State<Todostate> {
   initState() {
     super.initState();
     _datamanage.open().then((result) {
-      _datamanage.getTodoItems().then((r) {
+      _datamanage.getTodo().then((r) {
         for (var i = 0; i < r.length; i++) {
-           (r[i].isComplete == false)?setState(() {_unCompleteItems.add(r[i]) ;}):setState(() {_completeItems.add(r[i]);});
+           (r[i].done == false)?setState(() {_unCompleteItems.add(r[i]) ;}):setState(() {_completeItems.add(r[i]);});
         }
       });
     });
   }
+
+  // void getTodoList() async {
+  //   await db.open("todo.db");
+  //   db.getAllTodos().then((todolist) {
+  //     setState(() {
+  //       this.todolist = todolist;
+  //       this.countTodo = todolist.length;
+  //     });
+  //   });
+  //   db.getAllDoneTodos().then((todoDoneList) {
+  //     setState(() {
+  //       this.todoDoneList = todoDoneList;
+  //       this.countDone = todoDoneList.length;
+  //     });
+  //   });
+  // }
   //AddItemTo TodoList
-  void _addItemToList() async {
+
+  void _addItem() async {
     _unCompleteItems = List();
+    havecount = false;
     _completeItems = List();
-    await Navigator.push(
-        context, MaterialPageRoute(builder: (context) => AddItempage()));
-    _datamanage.getTodoItems().then((r) {
+    count = 0;
+    await Navigator.pushNamed(context, "/add");
+    _datamanage.getTodo().then((r) {
+
+      //check it have space to add
+      //***Not use Now***/
+      for(var j = 0; j < counttodo; j++) {
+        count += 1;
+      }
+      if(count > 0) {
+        havecount = true;
+      }
+
+      //add list
+      //Use//
       for (var i = 0; i < r.length; i++) {
-        (r[i].isComplete == false)?setState(() { _unCompleteItems.add(r[i]);}):setState(() { _completeItems.add(r[i]);});
+        (r[i].done == false)?setState(() { _unCompleteItems.add(r[i]);}):setState(() { _completeItems.add(r[i]);});
       }
     });
   }
-  //UpdateItem in TodoList And check isComplete
-  void _updateTodocheckComplete(TodoManager item, bool newStatus) {
+  //UpdateItem in TodoList And check done
+  void _update(TodoManage item, bool newStatus) {
     _unCompleteItems = List();
     _completeItems = List();
-    item.isComplete = newStatus;
+    count = 0;
+    havedelete = false;
+    item.done = newStatus;
     _datamanage.updateTodo(item);
-    _datamanage.getTodoItems().then((items) {
+    _datamanage.getTodo().then((items) {
+
+      //check update finish
+      //***Not use Now***/
+      for(var j = 0; j < countcomplete+counttodo; j++) {
+        count += 1;
+      }
+      if(count == 0) {
+        haveupdate = true;
+      }
+
+      //add list for update
+      //Use//
       for (var i = 0; i < items.length; i++) {
-        (items[i].isComplete == false)?setState(() { _unCompleteItems.add(items[i]);}):setState(() { _completeItems.add(items[i]);});
+        (items[i].done == false)?setState(() { _unCompleteItems.add(items[i]);}):setState(() { _completeItems.add(items[i]);});
       }
     });
   }
-  //Delete element in TodoList
-  void _deleteTodoItem() {
-    _datamanage.deleteTodo();
+
+  void _delete() {
+
+    //check it have data to delete
+    //***Not use Now***/
+    count = 0;
+    havedelete = false;
+    for(var j = 0; j < countcomplete; j++) {
+        count += 1;
+      }
+      if(count > 0) {
+        havedelete = true;
+      }
+
+      //delete item
+      //Use//
+    _datamanage.deleteDone();
           setState(() {
             _completeItems =List();
           });
   }
+  //Delete element in TodoList
 
-  Widget _createTodoItemWidget(TodoManager item) {
+  Widget _createuncomplete(TodoManage item) {
+
+    //check if havecount = true its means it have list
+    //***Not use Now***/
+    state = false;
+    if(havecount == true) {
+      state = true;
+    }
+
+    //return uncomplete list
+    //Use//
     return ListTile(
-      title: Text(item.name),
+      title: Text(item.title),
       trailing: Checkbox(
-        value: item.isComplete,
-        onChanged: (value) => _updateTodocheckComplete(item, value),
+        value: item.done,
+        onChanged: (value) => _update(item, value),
       ),
     );
   }
 
-  Widget _createCompleteItemWidget(TodoManager item) {
+  Widget _createallcomplete(TodoManage item) {
+
+    //check if havecount = true its means it have list
+    //***Not use Now***/
+    state = false;
+    if(havecount == true) {
+      state = true;
+    }
+
+    //return complete list
+    //Use//
     return ListTile(
-      title: Text(item.name),
+      title: Text(item.title),
       trailing: Checkbox(
-        value: item.isComplete,
-        onChanged: (value) => _updateTodocheckComplete(item, value),
+        value: item.done,
+        onChanged: (value) => _update(item, value),
       ),
     );
   }
@@ -122,9 +209,9 @@ class _TodoListScreenPage extends State<Todostate> {
   Widget build(BuildContext context) {
     // _unCompleteItems.sort();
     var todoListShow, completeListShow;
-    var todoItem = _unCompleteItems.map(_createTodoItemWidget).toList();
+    var todoItem = _unCompleteItems.map(_createuncomplete).toList();
     var completeItem =
-        _completeItems.map(_createCompleteItemWidget).toList();
+        _completeItems.map(_createallcomplete).toList();
     if(todoItem.isEmpty){
       todoListShow = Center(
               child: Text(
@@ -151,7 +238,8 @@ class _TodoListScreenPage extends State<Todostate> {
       children: completeItem,
     );
     }
-
+    counttodo = todoItem.length;
+    countcomplete = completeItem.length;
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -180,7 +268,7 @@ class _TodoListScreenPage extends State<Todostate> {
                   new IconButton(
                     icon: new Icon(Icons.add),
                     color: Colors.white,
-                    onPressed: _addItemToList,
+                    onPressed: _addItem,
                   )
                 ],
               ),
@@ -193,7 +281,7 @@ class _TodoListScreenPage extends State<Todostate> {
                   new IconButton(
                     icon: new Icon(Icons.delete),
                     color: Colors.white,
-                    onPressed: _deleteTodoItem,
+                    onPressed: _delete,
                   )
                 ],
               ),
@@ -214,7 +302,7 @@ class AddItempage extends StatefulWidget {
 class _AddItemState extends State<AddItempage> {
   final _tdController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+  TodoProvider dbget = TodoProvider();
 
   @override
   Widget build(BuildContext context) {
@@ -242,10 +330,12 @@ class _AddItemState extends State<AddItempage> {
                   child: RaisedButton(
                     child: Text("Save"),
                     onPressed: () {
-                      if(_formKey.currentState.validate()) {
-                        DataAccess().insertTodo(TodoManager(name: _tdController.text));
-                        Navigator.pop(context);
-                      }
+                       if (_formKey.currentState.validate() == false) {
+                          print("Please fill Subject");
+                        } else {
+                          dbget.insertTodo(TodoManage(title: _tdController.text));
+                          Navigator.pop(context);
+                        }  
                     }
                   )
                   ),

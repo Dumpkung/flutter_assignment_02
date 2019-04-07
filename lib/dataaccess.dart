@@ -4,31 +4,46 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+final String todoTable = "TodoItems";
 // final String tableTodo = "todo";
 // final String columnId = "_id";
-// final String columnTitle = "title";
+// final String columnName = "name";
 // final String columnDone = "done";
 
 
-class TodoManager extends Comparable {
+class TodoManage extends Comparable {
   int id;
-  final String name;
-  bool isComplete;
+  final String title;
+  bool done;
+//   int id;
+//   String name;
+//   bool done;
 
-  TodoManager({this.name, this.isComplete = false});
+//   Todo({this.id, this.name, this.done});
+
+//   factory Todo.fromMap(Map<String, dynamic> json) => new Todo(
+//         id: json[columnId],
+//         name: json[columnName],
+//         done: json[columnDone] == 1,
+//       );
+
+//   Map<String, dynamic> toMap() => {
+//         columnName: name,
+//         columnDone: done == false ? 0 : 1,
+//       };
+// }
+  TodoManage({this.title, this.done = false});
   
-  //map
-  TodoManager.fromMap(Map<String, dynamic> map)
+  TodoManage.fromMap(Map<String, dynamic> map)
   : id = map["id"],
-    name = map["name"],
-    isComplete = map["isComplete"] == 1;  
+    title = map["name"],
+    done = map["isComplete"] == 1;  
 
-  //compare
   @override
   int compareTo(other) {
-    if (this.isComplete && !other.isComplete) {
+    if (this.done && !other.done) {
       return 1;
-    } else if (!this.isComplete && other.isComplete) {
+    } else if (!this.done && other.done) {
       return -1;
     } else {
       return this.id.compareTo(other.id);
@@ -37,8 +52,8 @@ class TodoManager extends Comparable {
 
   Map<String, dynamic> toMap() {
     var map = <String, dynamic>{
-      "name": name,
-      "isComplete": isComplete ? 1 : 0
+      "name": title,
+      "isComplete": done ? 1 : 0
     };
     // Allow for auto-increment
     if (id != null) {
@@ -47,33 +62,36 @@ class TodoManager extends Comparable {
     return map;
   }
 }
-
-final String todoTable = "TodoItems";
-
-class DataAccess {
-  static final DataAccess _dataManager = DataAccess._internal();
+class TodoProvider {
+  static final TodoProvider _instance = TodoProvider._internal();
   Database _db;
 
-  factory DataAccess() {
-    return _dataManager;
+  factory TodoProvider() {
+    return _instance;
   }
 
-  DataAccess._internal();
-// Future<Database> get database async {
-//     if (_database != null) return _database;
-//     _database = await createDatabase();
-//     return _database;
-//   }
-//   createDatabase() async {
-//     Directory documentsDirectory = await getApplicationDocumentsDirectory();
-//     //"ReactiveTodo.db is our database instance name
-//     String path = join(documentsDirectory.path, "ReactiveTodo.db");
-//     var database = await openDatabase(path,
-//         version: 1, onCreate: initDB, onUpgrade: onUpgrade);
-//     return database;
+  TodoProvider._internal();
+// static final TodoProvider db = TodoProvider();
+
+//   Database _database;
+
+//   Future<Database> get database async {
+//     if (_database != null) {
+//       return _database;
+//     } else {
+//       _database = await openDB("todo.db");
+//       return _database;
+//     }
 //   }
 
-  //opendatabase
+//   Future openDB(String path) async {
+//     return await openDatabase(path, version: 1,
+//         onCreate: (Database _database, int version) async {
+//       await _database.execute(
+//           '''create table $tableTodo ($columnId integer primary key autoincrement, $columnName text not null,$columnDone integer not null)''');
+//     });
+//   }
+
   Future open() async {
 
     var databasesPath = await getDatabasesPath();
@@ -84,87 +102,34 @@ class DataAccess {
           await db.execute('''
             create table $todoTable ( 
             id integer primary key autoincrement, 
-            description text not null,
+            name text not null,
             isComplete integer not null)
             ''');
     });
   }
-  //getdata
-  Future<List<TodoManager>> getTodoItems() async {
-    var dataget = await _db.query(todoTable);
-    var result = dataget.map((d) => TodoManager.fromMap(d)).toList();
-    return result;
+
+  Future insertTodo(TodoManage item) {
+    return _db.insert(todoTable, item.toMap());
   }
-  //insertdata
-  Future insertTodo(TodoManager item) {
-    var datainsert = _db.insert(todoTable, item.toMap());
-    return datainsert;
+
+  Future<List<TodoManage>> getTodo() async {
+    final _database = await _db;
+    var result = await _database.query(todoTable);
+
+    List<TodoManage> list =
+        result.isNotEmpty ? result.map((c) => TodoManage.fromMap(c)).toList() : [];
+    return list;
   }
-  //updatedata
-  Future updateTodo(TodoManager item) {
-    var dataupdate = _db.update(todoTable, item.toMap(),
-      where: "id = ?", whereArgs: [item.id]);
-    return dataupdate;
+
+  Future<void> updateTodo(TodoManage todo) async {
+    return _db.update(todoTable, todo.toMap(),
+      where: "id = ?", whereArgs: [todo.id]);;
   }
-  
-  //deletedata
-  Future deleteTodo() {
-    return _db.delete(todoTable, where: "isComplete = ?", whereArgs: [true]);
+
+  Future<void> deleteDone() async {
+    final _database = await _db;
+    return await _database.delete(todoTable, where: "isComplete = 1");
   }
-  // //Adds new Todo records
-  // Future<int> createTodo(Todo todo) async {
-  //   final db = await dbProvider.database;
-  //   var result = db.insert(todoTABLE, todo.toDatabaseJson());
-  //   return result;
-  // }
 
-  // //Get All Todo items
-  // //Searches if query string was passed
-  // Future<List<Todo>> getTodos({List<String> columns, String query}) async {
-  //   final db = await dbProvider.database;
-
-  //   List<Map<String, dynamic>> result;
-  //   if (query != null) {
-  //     if (query.isNotEmpty)
-  //       result = await db.query(todoTABLE,
-  //           columns: columns,
-  //           where: 'description LIKE ?',
-  //           whereArgs: ["%$query%"]);
-  //   } else {
-  //     result = await db.query(todoTABLE, columns: columns);
-  //   }
-
-  //   List<Todo> todos = result.isNotEmpty
-  //       ? result.map((item) => Todo.fromDatabaseJson(item)).toList()
-  //       : [];
-  //   return todos;
-  // }
-
-  // //Update Todo record
-  // Future<int> updateTodo(Todo todo) async {
-  //   final db = await dbProvider.database;
-
-  //   var result = await db.update(todoTABLE, todo.toDatabaseJson(),
-  //       where: "id = ?", whereArgs: [todo.id]);
-
-  //   return result;
-  // }
-
-  // //Delete Todo records
-  // Future<int> deleteTodo(int id) async {
-  //   final db = await dbProvider.database;
-  //   var result = await db.delete(todoTABLE, where: 'id = ?', whereArgs: [id]);
-
-  //   return result;
-  // }
-
-  // //We are not going to use this in the demo
-  // Future deleteAllTodos() async {
-  //   final db = await dbProvider.database;
-  //   var result = await db.delete(
-  //     todoTABLE,
-  //   );
-
-  //   return result;
-  // }
+  Future close() async => _db.close();
 }
