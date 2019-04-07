@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 
 final String todoTable = "todo";
-final String idColumn = "_id";
-final String todoItemColumn = "title";
-final String isDoneColumn = "done";
+final String idtodo = "_id";
+final String itemtodo = "title";
+final String iscompletetodo = "done";
 
 
 class TodoManage extends Comparable {
@@ -31,9 +31,9 @@ class TodoManage extends Comparable {
   TodoManage({this.title, this.done = false});
   
   TodoManage.fromMap(Map<String, dynamic> map)
-  : id = map[idColumn],
-    title = map[todoItemColumn],
-    done = map[isDoneColumn] == 1;  
+  : id = map[idtodo],
+    title = map[itemtodo],
+    done = map[iscompletetodo] == 1;  
 
   @override
   int compareTo(other) {
@@ -48,12 +48,12 @@ class TodoManage extends Comparable {
 
   Map<String, dynamic> toMap() {
     var map = <String, dynamic>{
-      todoItemColumn: title,
-      isDoneColumn: done ? 1 : 0
+      itemtodo: title,
+      iscompletetodo: done ? 1 : 0
     };
     // Allow for auto-increment
     if (id != null) {
-      map[idColumn] = id;
+      map[idtodo] = id;
     }
     return map;
   }
@@ -77,29 +77,43 @@ class TodoProvider {
         onCreate: (Database db, int version) async {
           await db.execute('''
             create table $todoTable ( 
-            $idColumn integer primary key autoincrement, 
-            $todoItemColumn text not null,
-            $isDoneColumn integer not null)
+            $idtodo integer primary key autoincrement, 
+            $itemtodo text not null,
+            $iscompletetodo integer not null)
             ''');
     });
   }
 
    Future<List<TodoManage>> getTodo() async {
     var data = await _db.query(todoTable);
-    return data.map((d) => TodoManage.fromMap(d)).toList();
+    var result = data.map((d) => TodoManage.fromMap(d)).toList();
+    return result;
   }
+// Future<List<Todo>> getAllTodos() async {
+//     var todo = await db.query(tableTodo,
+//     where: '$columnDone = 0');
+//     return todo.map((f) => Todo.formMap(f)).toList();
+//   }
+
+//   Future<List<Todo>> getAllDoneTodos() async{
+//     var todo = await db.query(tableTodo,
+//     where: '$columnDone = 1');
+//     return todo.map((f) => Todo.formMap(f)).toList();
+//   }
 
    Future insertTodo(TodoManage item) {
     print(item.toMap());
-    return _db.insert(todoTable, item.toMap());
+    var data = _db.insert(todoTable, item.toMap());
+    return data;
   }
 
    Future updateTodo(TodoManage item) {
-    return _db.update(todoTable, item.toMap(),
-      where: "$idColumn = ?", whereArgs: [item.id]);
+    var data = _db.update(todoTable, item.toMap(),
+      where: "$idtodo = ?", whereArgs: [item.id]);
+    return data;
   }
 
    Future deleteTodo() {
-    return _db.delete(todoTable, where: "$isDoneColumn = ?", whereArgs: [true]);
+    return _db.delete(todoTable, where: "$iscompletetodo = ?", whereArgs: [true]);
   }
 }
